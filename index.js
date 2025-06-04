@@ -1,31 +1,40 @@
 import http from 'http';
-import fetch from 'node-fetch'; // For making HTTP requests
+import fetch from 'node-fetch';
+import dotenv from 'dotenv'; // Import dotenv
 
-// --- Configuration ---
-const GOTIFY_URL = 'https://gotify.117820.xyz';
-const APP_TOKEN = 'AShBsM2loEBAokH'; // Your Gotify Application Token
-const PORT = 3000;
+// Load environment variables from .env file
+dotenv.config();
+
+// --- Configuration from Environment Variables ---
+const GOTIFY_URL = process.env.GOTIFY_URL;
+const APP_TOKEN = process.env.GOTIFY_APP_TOKEN;
+const PORT = process.env.SERVER_PORT || 443; // Use port from .env or default to 3000
+
+// Basic validation to ensure environment variables are loaded
+if (!GOTIFY_URL || !APP_TOKEN) {
+    console.error('Error: GOTIFY_URL and GOTIFY_APP_TOKEN must be set in your .env file.');
+    process.exit(1); // Exit if critical variables are missing
+}
+
 
 // Function to fetch messages from Gotify
 async function getGotifyMessages() {
     try {
         const response = await fetch(`<span class="math-inline">\{GOTIFY\_URL\}/message?token\=</span>{APP_TOKEN}`);
         if (!response.ok) {
-            // Not a 2xx response, handle error
             throw new Error(`Gotify API error: ${response.status} ${response.statusText}`);
         }
         const data = await response.json();
-        return data.messages; // Assuming 'messages' array is directly under the root
+        return data.messages;
     } catch (error) {
         console.error('Failed to fetch Gotify messages:', error.message);
-        return []; // Return empty array on error
+        return [];
     }
 }
 
 // Create the HTTP server
 const server = http.createServer(async (req, res) => {
     if (req.url === '/') {
-        // Only respond to root URL
         const messages = await getGotifyMessages();
 
         res.writeHead(200, { 'Content-Type': 'text/plain' });
@@ -44,7 +53,6 @@ const server = http.createServer(async (req, res) => {
             res.end(output);
         }
     } else {
-        // For any other URL
         res.writeHead(404, { 'Content-Type': 'text/plain' });
         res.end('404 Not Found');
     }
@@ -54,4 +62,5 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, () => {
     console.log(`Gotify message server running at http://localhost:${PORT}/`);
     console.log('Access this URL in your browser to see messages.');
+    console.log('Gotify URL:', GOTIFY_URL); // For debugging, remove in production
 });
